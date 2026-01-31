@@ -209,13 +209,13 @@
     const availH = Math.max(0, Math.floor(hostRect.height));
 
     // Choose a grid (cols×rows) whose aspect matches the screen best,
-    // then fit it fully (no scroll).
+    // then fit it fully inside the host (no cropping, no scroll).
     const best = pickBestGrid(availW, availH);
     state.cols = best.cols;
     state.rows = best.rows;
-    // Cover (no empty margins): grid becomes >= host and is cropped by overflow:hidden.
+    // Contain: ensure the grid never exceeds the host.
     // Use integer size for crisp cells.
-    let cellSize = Math.max(1, Math.max(Math.ceil(availW / state.cols), Math.ceil(availH / state.rows)));
+    let cellSize = Math.max(1, Math.floor(Math.min(availW / state.cols, availH / state.rows)));
 
     // Safety cap: keep canvas backing store under ~48MB of pixels (RGBA).
     const maxPixels = 12_000_000;
@@ -229,9 +229,9 @@
     state.gridPxW = state.cols * cellSize;
     state.gridPxH = state.rows * cellSize;
 
-    // Center the grid; offsets may be negative (cropping) in cover mode.
-    state.offsetCssX = Math.floor((availW - state.gridPxW) / 2);
-    state.offsetCssY = Math.floor((availH - state.gridPxH) / 2);
+    // Center inside the host (non-negative offsets).
+    state.offsetCssX = Math.max(0, Math.floor((availW - state.gridPxW) / 2));
+    state.offsetCssY = Math.max(0, Math.floor((availH - state.gridPxH) / 2));
 
     // CSS size
     canvas.style.width = `${state.gridPxW}px`;
