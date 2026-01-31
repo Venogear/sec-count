@@ -2,9 +2,19 @@
 (() => {
   "use strict";
 
-  const COLS = 360;
-  const ROWS = 240;
-  const TOTAL = COLS * ROWS; // 86400
+  const TOTAL = 86400;
+
+  const factorPairs = (() => {
+    /** @type {{cols:number, rows:number}[]} */
+    const pairs = [];
+    for (let a = 1; a * a <= TOTAL; a++) {
+      if (TOTAL % a !== 0) continue;
+      const b = TOTAL / a;
+      pairs.push({ cols: b, rows: a });
+      if (a !== b) pairs.push({ cols: a, rows: b });
+    }
+    return pairs;
+  })();
 
   /** @type {HTMLCanvasElement} */
   const canvas = document.getElementById("dayCanvas");
@@ -42,8 +52,10 @@
   const state = {
     dpr: 1,
     cellSizeCss: 1, // in CSS pixels
-    gridPxW: COLS,
-    gridPxH: ROWS,
+    cols: 360,
+    rows: 240,
+    gridPxW: 360,
+    gridPxH: 240,
     offsetCssX: 0, // letterbox offset (CSS px) within host
     offsetCssY: 0,
     fillColor: fillColorEl?.value || "#2d7dff",
@@ -105,8 +117,8 @@
   }
 
   function indexToXY(index) {
-    const x = index % COLS;
-    const y = (index / COLS) | 0;
+    const x = index % state.cols;
+    const y = (index / state.cols) | 0;
     return { x, y };
   }
 
@@ -134,11 +146,11 @@
     ctx.fillStyle = state.emptyColor;
     if (s === 1) {
       // 1px cells: empty is full fill.
-      ctx.fillRect(0, 0, COLS, ROWS);
+      ctx.fillRect(0, 0, state.cols, state.rows);
     } else {
       for (let i = 0; i < TOTAL; i++) {
-        const x = i % COLS;
-        const y = (i / COLS) | 0;
+        const x = i % state.cols;
+        const y = (i / state.cols) | 0;
         ctx.fillRect(x * s, y * s, w, w);
       }
     }
@@ -149,18 +161,46 @@
       // 1px cells: fastest path for filled overlay.
       for (let i = 0; i < TOTAL; i++) {
         if (!filled[i]) continue;
-        const x = i % COLS;
-        const y = (i / COLS) | 0;
+        const x = i % state.cols;
+        const y = (i / state.cols) | 0;
         ctx.fillRect(x, y, 1, 1);
       }
     } else {
       for (let i = 0; i < TOTAL; i++) {
         if (!filled[i]) continue;
-        const x = i % COLS;
-        const y = (i / COLS) | 0;
+        const x = i % state.cols;
+        const y = (i / state.cols) | 0;
         ctx.fillRect(x * s, y * s, w, w);
       }
     }
+  }
+
+  function pickBestGrid(availW, availH) {
+    const aspect = availW > 0 && availH > 0 ? availW / availH : 1.5;
+    /** @type {{cols:number, rows:number, score:number, cell:number}|null} */
+    let best = null;
+
+    for (const p of factorPairs) {
+      const ratio = p.cols / p.rows;
+      const score = Math.abs(Math.log(ratio / aspect));
+      const cell = Math.max(1, Math.floor(Math.min(availW / p.cols, availH / p.rows)));
+      const candidate = { cols: p.cols, rows: p.rows, score, cell };
+
+      if (!best) {
+        best = candidate;
+        continue;
+      }
+
+      // Primary: closest aspect. Secondary: bigger cell size.
+      if (candidate.score < best.score - 1e-6) {
+        best = candidate;
+      } else if (Math.abs(candidate.score - best.score) <= 1e-6 && candidate.cell > best.cell) {
+        best = candidate;
+      }
+    }
+
+    // Fallback
+    return best || { cols: 360, rows: 240, score: 0, cell: 1 };
   }
 
   function computeLayout() {
@@ -168,27 +208,30 @@
     const availW = Math.max(0, Math.floor(hostRect.width));
     const availH = Math.max(0, Math.floor(hostRect.height));
 
-    // "Cover" sizing: make the grid cover the full host without letterboxing.
-    // Any overflow is handled by scrolling in the host.
-    // Use integer cell sizes to keep crisp cells.
-    let cellSize = Math.max(1, Math.max(Math.ceil(availW / COLS), Math.ceil(availH / ROWS)));
+    // Choose a grid (cols×rows) whose aspect matches the screen best,
+    // then fit it fully (no scroll).
+    const best = pickBestGrid(availW, availH);
+    state.cols = best.cols;
+    state.rows = best.rows;
+    // Cover (no empty margins): grid becomes >= host and is cropped by overflow:hidden.
+    // Use integer size for crisp cells.
+    let cellSize = Math.max(1, Math.max(Math.ceil(availW / state.cols), Math.ceil(availH / state.rows)));
 
     // Safety cap: keep canvas backing store under ~48MB of pixels (RGBA).
-    // We cap DPR further below too, but if CSS area alone is too big, reduce cellSize.
     const maxPixels = 12_000_000;
     while (cellSize > 1) {
-      const areaCss = (COLS * cellSize) * (ROWS * cellSize);
+      const areaCss = (state.cols * cellSize) * (state.rows * cellSize);
       if (areaCss <= maxPixels) break;
       cellSize--;
     }
     state.cellSizeCss = cellSize;
 
-    state.gridPxW = COLS * cellSize;
-    state.gridPxH = ROWS * cellSize;
+    state.gridPxW = state.cols * cellSize;
+    state.gridPxH = state.rows * cellSize;
 
-    // No centering: pin to top/left to avoid visible side gaps.
-    state.offsetCssX = 0;
-    state.offsetCssY = 0;
+    // Center the grid; offsets may be negative (cropping) in cover mode.
+    state.offsetCssX = Math.floor((availW - state.gridPxW) / 2);
+    state.offsetCssY = Math.floor((availH - state.gridPxH) / 2);
 
     // CSS size
     canvas.style.width = `${state.gridPxW}px`;
@@ -358,8 +401,8 @@
     const s = state.cellSizeCss;
     const col = Math.floor(x / s);
     const row = Math.floor(y / s);
-    if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return -1;
-    return row * COLS + col;
+    if (col < 0 || col >= state.cols || row < 0 || row >= state.rows) return -1;
+    return row * state.cols + col;
   }
 
   function showTooltip(text, clientX, clientY) {
