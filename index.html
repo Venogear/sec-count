@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Seconds of Day (86 400)</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar__title">
+        <div class="topbar__name">Seconds of Day</div>
+        <div class="topbar__subtitle">86 400 квадратов, 1 квадрат = 1 секунда</div>
+      </div>
+
+      <div class="controls" role="group" aria-label="Настройки">
+        <div class="controls__row">
+          <div class="control">
+            <div class="control__label">Текущее время</div>
+            <output id="clock" class="control__value" aria-live="polite">--:--:--</output>
+          </div>
+
+          <label class="control control--inline" title="Цвет заполнения">
+            <span class="control__label">Цвет</span>
+            <input id="fillColor" type="color" value="#2d7dff" />
+          </label>
+
+          <label class="control control--inline" title="Показывать границы между клетками (дороже на больших размерах)">
+            <input id="showGrid" type="checkbox" />
+            <span class="control__label">Границы</span>
+          </label>
+
+          <label class="control control--inline" title="При загрузке сразу заполнить прошедшие секунды текущих суток">
+            <input id="startFromNow" type="checkbox" checked />
+            <span class="control__label">Старт с текущего времени</span>
+          </label>
+        </div>
+
+        <div class="controls__row">
+          <button id="togglePause" type="button" class="btn">Пауза</button>
+          <button id="reset" type="button" class="btn btn--ghost">Сброс</button>
+          <div class="hint" id="hint">Наведи на квадрат, чтобы увидеть время</div>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="stage" aria-label="Визуализация суток">
+        <div id="canvasHost" class="canvasHost">
+          <canvas id="dayCanvas" class="canvas" aria-label="Сетка секунд" role="img"></canvas>
+          <div id="tooltip" class="tooltip" role="status" aria-hidden="true"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="./main.js" defer></script>
+  </body>
+</html>

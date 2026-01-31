@@ -1,0 +1,190 @@
+/* Minimal, fast UI (no frameworks). */
+
+:root {
+  color-scheme: dark;
+  --bg: #0b0f1a;
+  --panel: rgba(255, 255, 255, 0.06);
+  --panel2: rgba(255, 255, 255, 0.04);
+  --text: rgba(255, 255, 255, 0.92);
+  --muted: rgba(255, 255, 255, 0.65);
+  --border: rgba(255, 255, 255, 0.12);
+  --shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(1200px 700px at 20% 0%, rgba(45, 125, 255, 0.12), transparent 60%),
+    radial-gradient(1000px 650px at 80% 10%, rgba(34, 197, 94, 0.08), transparent 55%),
+    var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 14px 14px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(to bottom, rgba(11, 15, 26, 0.92), rgba(11, 15, 26, 0.70));
+  backdrop-filter: blur(10px);
+}
+
+.topbar__title {
+  min-width: 220px;
+}
+
+.topbar__name {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.topbar__subtitle {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.controls {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.controls__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  align-items: center;
+}
+
+.control {
+  display: grid;
+  gap: 4px;
+}
+
+.control--inline {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.control__label {
+  font-size: 12px;
+  color: var(--muted);
+  user-select: none;
+}
+
+.control__value {
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel2);
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn--ghost {
+  background: transparent;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: 2px;
+}
+
+.main {
+  height: calc(100% - 1px);
+}
+
+.stage {
+  height: calc(100vh - 86px);
+  min-height: 260px;
+  padding: 14px;
+}
+
+.canvasHost {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  overflow: auto;
+  box-shadow: var(--shadow);
+}
+
+.canvas {
+  display: block;
+  margin: 0;
+  /* Actual size is set from JS based on cell size. */
+}
+
+.tooltip {
+  position: fixed;
+  pointer-events: none;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(10, 12, 18, 0.92);
+  color: var(--text);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.tooltip[data-visible="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stage {
+    height: calc(100vh - 160px);
+  }
+}
