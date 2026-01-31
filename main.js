@@ -164,32 +164,44 @@
   }
 
   function computeLayout() {
-    const dpr = clamp(window.devicePixelRatio || 1, 1, 3);
-    state.dpr = dpr;
-
     const hostRect = canvasHost.getBoundingClientRect();
     const availW = Math.max(0, Math.floor(hostRect.width));
     const availH = Math.max(0, Math.floor(hostRect.height));
 
-    // Choose largest integer cell size that fills at least one dimension.
-    // This avoids big empty side areas: if one dimension doesn't fit, container scrolls.
-    const fitCellW = Math.floor(availW / COLS);
-    const fitCellH = Math.floor(availH / ROWS);
-    const cellSize = Math.max(1, Math.max(fitCellW, fitCellH));
+    // "Cover" sizing: make the grid cover the full host without letterboxing.
+    // Any overflow is handled by scrolling in the host.
+    // Use integer cell sizes to keep crisp cells.
+    let cellSize = Math.max(1, Math.max(Math.ceil(availW / COLS), Math.ceil(availH / ROWS)));
+
+    // Safety cap: keep canvas backing store under ~48MB of pixels (RGBA).
+    // We cap DPR further below too, but if CSS area alone is too big, reduce cellSize.
+    const maxPixels = 12_000_000;
+    while (cellSize > 1) {
+      const areaCss = (COLS * cellSize) * (ROWS * cellSize);
+      if (areaCss <= maxPixels) break;
+      cellSize--;
+    }
     state.cellSizeCss = cellSize;
 
     state.gridPxW = COLS * cellSize;
     state.gridPxH = ROWS * cellSize;
 
-    // Center only on axes that fit; otherwise pin to top/left and let scroll work.
-    state.offsetCssX = state.gridPxW <= availW ? Math.max(0, Math.floor((availW - state.gridPxW) / 2)) : 0;
-    state.offsetCssY = state.gridPxH <= availH ? Math.max(0, Math.floor((availH - state.gridPxH) / 2)) : 0;
+    // No centering: pin to top/left to avoid visible side gaps.
+    state.offsetCssX = 0;
+    state.offsetCssY = 0;
 
     // CSS size
     canvas.style.width = `${state.gridPxW}px`;
     canvas.style.height = `${state.gridPxH}px`;
     canvas.style.marginLeft = `${state.offsetCssX}px`;
     canvas.style.marginTop = `${state.offsetCssY}px`;
+
+    // DPR: cap to avoid huge backing store on large screens.
+    const deviceDpr = clamp(window.devicePixelRatio || 1, 1, 3);
+    const areaCss = state.gridPxW * state.gridPxH;
+    const maxDprForBudget = Math.sqrt(maxPixels / Math.max(1, areaCss));
+    const dpr = clamp(Math.min(deviceDpr, maxDprForBudget), 1, 3);
+    state.dpr = dpr;
 
     // Backing store (scaled by dpr)
     canvas.width = Math.max(1, Math.round(state.gridPxW * dpr));
