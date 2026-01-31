@@ -18,6 +18,8 @@
   /** @type {HTMLInputElement} */
   const fillColorEl = document.getElementById("fillColor");
   /** @type {HTMLInputElement} */
+  const emptyColorEl = document.getElementById("emptyColor");
+  /** @type {HTMLInputElement} */
   const showGridEl = document.getElementById("showGrid");
   /** @type {HTMLInputElement} */
   const startFromNowEl = document.getElementById("startFromNow");
@@ -36,6 +38,7 @@
     offsetCssX: 0, // letterbox offset (CSS px) within host
     offsetCssY: 0,
     fillColor: fillColorEl?.value || "#2d7dff",
+    emptyColor: emptyColorEl?.value || "#ffffff",
     showGrid: !!showGridEl?.checked,
     startFromNow: true,
     paused: false,
@@ -114,11 +117,27 @@
     ctx.fillStyle = "#0b0f1a";
     ctx.fillRect(0, 0, state.gridPxW, state.gridPxH);
 
-    // Filled cells
-    ctx.fillStyle = state.fillColor;
     const s = state.cellSizeCss;
+    const gap = state.showGrid && s >= 2 ? 1 : 0;
+    const w = s - gap;
+
+    // Empty cells (draw once per full redraw)
+    ctx.fillStyle = state.emptyColor;
     if (s === 1) {
-      // 1px cells: fastest path.
+      // 1px cells: empty is full fill.
+      ctx.fillRect(0, 0, COLS, ROWS);
+    } else {
+      for (let i = 0; i < TOTAL; i++) {
+        const x = i % COLS;
+        const y = (i / COLS) | 0;
+        ctx.fillRect(x * s, y * s, w, w);
+      }
+    }
+
+    // Filled cells overlay
+    ctx.fillStyle = state.fillColor;
+    if (s === 1) {
+      // 1px cells: fastest path for filled overlay.
       for (let i = 0; i < TOTAL; i++) {
         if (!filled[i]) continue;
         const x = i % COLS;
@@ -126,8 +145,6 @@
         ctx.fillRect(x, y, 1, 1);
       }
     } else {
-      const gap = state.showGrid && s >= 2 ? 1 : 0;
-      const w = s - gap;
       for (let i = 0; i < TOTAL; i++) {
         if (!filled[i]) continue;
         const x = i % COLS;
@@ -260,6 +277,7 @@
       if (!raw) return;
       const s = JSON.parse(raw);
       if (typeof s.fillColor === "string") state.fillColor = s.fillColor;
+      if (typeof s.emptyColor === "string") state.emptyColor = s.emptyColor;
       if (typeof s.showGrid === "boolean") state.showGrid = s.showGrid;
       if (typeof s.startFromNow === "boolean") state.startFromNow = s.startFromNow;
     } catch {
@@ -273,6 +291,7 @@
         "secDaySettings_v1",
         JSON.stringify({
           fillColor: state.fillColor,
+          emptyColor: state.emptyColor,
           showGrid: state.showGrid,
           startFromNow: state.startFromNow,
         }),
@@ -347,6 +366,12 @@
       fullRedraw();
     });
 
+    emptyColorEl.addEventListener("input", () => {
+      state.emptyColor = emptyColorEl.value;
+      persistSettings();
+      fullRedraw();
+    });
+
     showGridEl.addEventListener("change", () => {
       state.showGrid = showGridEl.checked;
       persistSettings();
@@ -416,6 +441,7 @@
 
     // Apply settings to controls.
     fillColorEl.value = state.fillColor;
+    emptyColorEl.value = state.emptyColor;
     showGridEl.checked = state.showGrid;
     startFromNowEl.checked = state.startFromNow;
 
