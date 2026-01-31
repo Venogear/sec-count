@@ -34,6 +34,18 @@
 
   /** @type {HTMLDivElement} */
   const layoutModesEl = document.getElementById("layoutModes");
+  /** @type {HTMLOutputElement} */
+  const gridInfoEl = document.getElementById("gridInfo");
+  /** @type {HTMLInputElement} */
+  const gridColsEl = document.getElementById("gridCols");
+  /** @type {HTMLInputElement} */
+  const gridRowsEl = document.getElementById("gridRows");
+  /** @type {HTMLButtonElement} */
+  const applyGridBtn = document.getElementById("applyGrid");
+  /** @type {HTMLButtonElement} */
+  const autoGridBtn = document.getElementById("autoGrid");
+  /** @type {HTMLDivElement} */
+  const gridErrorEl = document.getElementById("gridError");
 
   /** @type {HTMLOutputElement} */
   const clockEl = document.getElementById("clock");
@@ -72,6 +84,9 @@
     // stretch: fixed 360×240, fill (rectangular cells)
     // auto: best factor grid, contain (no crop)
     layoutMode: /** @type {"fit"|"fill"|"stretch"|"auto"} */ ("auto"),
+    gridMode: /** @type {"auto"|"custom"} */ ("auto"),
+    customCols: 360,
+    customRows: 240,
     paused: false,
     lastFilled: -1,
     timerId: /** @type {number|null} */ (null),
@@ -95,6 +110,23 @@
 
   function pad2(n) {
     return String(n).padStart(2, "0");
+  }
+
+  function setGridError(msg) {
+    if (!gridErrorEl) return;
+    gridErrorEl.textContent = msg || "";
+  }
+
+  function isValidGrid(cols, rows) {
+    return Number.isFinite(cols) && Number.isFinite(rows) && cols > 0 && rows > 0 && cols * rows === TOTAL;
+  }
+
+  function updateGridUI() {
+    if (gridColsEl) gridColsEl.value = String(state.customCols);
+    if (gridRowsEl) gridRowsEl.value = String(state.customRows);
+    if (gridInfoEl) {
+      gridInfoEl.textContent = `Сетка: ${state.cols}×${state.rows} (${state.gridMode === "custom" ? "ручная" : "авто"})`;
+    }
   }
 
   function formatHMSFromSec(sec) {
@@ -254,9 +286,14 @@
 
     // Always choose grid shape dynamically (divisors of 86 400).
     // Modes now only affect scaling (contain/cover/stretch), not the grid dimensions.
-    const best = pickBestGrid(availW, availH);
-    state.cols = best.cols;
-    state.rows = best.rows;
+    if (state.gridMode === "custom" && isValidGrid(state.customCols, state.customRows)) {
+      state.cols = state.customCols;
+      state.rows = state.customRows;
+    } else {
+      const best = pickBestGrid(availW, availH);
+      state.cols = best.cols;
+      state.rows = best.rows;
+    }
 
     // Default for square modes.
     state.cellW = 1;
@@ -324,6 +361,8 @@
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = false;
+
+    updateGridUI();
   }
 
   function requestRaf() {
@@ -419,6 +458,9 @@
       if (s.layoutMode === "fit" || s.layoutMode === "fill" || s.layoutMode === "stretch" || s.layoutMode === "auto") {
         state.layoutMode = s.layoutMode;
       }
+      if (s.gridMode === "auto" || s.gridMode === "custom") state.gridMode = s.gridMode;
+      if (Number.isFinite(s.customCols)) state.customCols = s.customCols | 0;
+      if (Number.isFinite(s.customRows)) state.customRows = s.customRows | 0;
     } catch {
       // ignore
     }
@@ -434,6 +476,9 @@
           showGrid: state.showGrid,
           startFromNow: state.startFromNow,
           layoutMode: state.layoutMode,
+          gridMode: state.gridMode,
+          customCols: state.customCols,
+          customRows: state.customRows,
         }),
       );
     } catch {
@@ -549,6 +594,53 @@
       setLayoutMode(mode);
     });
 
+    function parseGridInputs() {
+      const cols = Number.parseInt(gridColsEl?.value || "", 10);
+      const rows = Number.parseInt(gridRowsEl?.value || "", 10);
+      return { cols, rows };
+    }
+
+    function maybeAutoFillOther(changed) {
+      const cols = Number.parseInt(gridColsEl?.value || "", 10);
+      const rows = Number.parseInt(gridRowsEl?.value || "", 10);
+
+      if (changed === "cols" && Number.isFinite(cols) && cols > 0 && TOTAL % cols === 0) {
+        gridRowsEl.value = String(TOTAL / cols);
+      } else if (changed === "rows" && Number.isFinite(rows) && rows > 0 && TOTAL % rows === 0) {
+        gridColsEl.value = String(TOTAL / rows);
+      }
+    }
+
+    gridColsEl?.addEventListener("input", () => {
+      setGridError("");
+      maybeAutoFillOther("cols");
+    });
+    gridRowsEl?.addEventListener("input", () => {
+      setGridError("");
+      maybeAutoFillOther("rows");
+    });
+
+    applyGridBtn?.addEventListener("click", () => {
+      const { cols, rows } = parseGridInputs();
+      if (!isValidGrid(cols, rows)) {
+        setGridError("Нужно, чтобы cols×rows = 86400 и оба числа были > 0.");
+        return;
+      }
+      state.gridMode = "custom";
+      state.customCols = cols;
+      state.customRows = rows;
+      persistSettings();
+      setGridError("");
+      onResize();
+    });
+
+    autoGridBtn?.addEventListener("click", () => {
+      state.gridMode = "auto";
+      persistSettings();
+      setGridError("");
+      onResize();
+    });
+
     fillColorEl.addEventListener("input", () => {
       state.fillColor = fillColorEl.value;
       persistSettings();
@@ -634,6 +726,7 @@
     showGridEl.checked = state.showGrid;
     startFromNowEl.checked = state.startFromNow;
     setActiveModeUI();
+    updateGridUI();
 
     bindUI();
     initFilledFromMode();
