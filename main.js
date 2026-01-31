@@ -252,15 +252,11 @@
 
     const maxPixels = 12_000_000;
 
-    // Decide grid shape for this mode.
-    if (state.layoutMode === "auto") {
-      const best = pickBestGrid(availW, availH);
-      state.cols = best.cols;
-      state.rows = best.rows;
-    } else {
-      state.cols = 360;
-      state.rows = 240;
-    }
+    // Always choose grid shape dynamically (divisors of 86 400).
+    // Modes now only affect scaling (contain/cover/stretch), not the grid dimensions.
+    const best = pickBestGrid(availW, availH);
+    state.cols = best.cols;
+    state.rows = best.rows;
 
     // Default for square modes.
     state.cellW = 1;

@@ -43,6 +43,31 @@
         </div>
 
         <div class="controls__row">
+          <div class="control" style="width: 100%;">
+            <div class="control__label">Сетка (cols×rows = 86 400)</div>
+            <div class="gridEditor">
+              <output id="gridInfo" class="gridInfo">Сетка: —</output>
+              <div class="gridEditor__inputs">
+                <label class="gridField">
+                  <span class="gridField__label">cols</span>
+                  <input id="gridCols" type="number" min="1" step="1" inputmode="numeric" />
+                </label>
+                <span class="gridMul">×</span>
+                <label class="gridField">
+                  <span class="gridField__label">rows</span>
+                  <input id="gridRows" type="number" min="1" step="1" inputmode="numeric" />
+                </label>
+              </div>
+              <div class="gridEditor__actions">
+                <button id="applyGrid" type="button" class="btn">Применить</button>
+                <button id="autoGrid" type="button" class="btn btn--ghost">Авто</button>
+              </div>
+              <div id="gridError" class="gridError" aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls__row">
           <label class="control control--inline" title="Цвет заполнения">
             <span class="control__label">Цвет</span>
             <input id="fillColor" type="color" value="#2d7dff" />
