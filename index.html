@@ -7,10 +7,19 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <header class="topbar">
-      <div class="topbar__title">
-        <div class="topbar__name">Seconds of Day</div>
-        <div class="topbar__subtitle">86 400 квадратов, 1 квадрат = 1 секунда</div>
+    <button id="menuBtn" type="button" class="menuBtn" aria-haspopup="dialog" aria-controls="drawer" aria-expanded="false">
+      Меню
+    </button>
+
+    <div id="backdrop" class="backdrop" hidden></div>
+
+    <aside id="drawer" class="drawer" role="dialog" aria-modal="true" aria-label="Настройки" aria-hidden="true">
+      <div class="drawer__header">
+        <div>
+          <div class="drawer__title">Seconds of Day</div>
+          <div class="drawer__subtitle">86 400 квадратов, 1 квадрат = 1 секунда</div>
+        </div>
+        <button id="closeDrawer" type="button" class="btn btn--ghost">Закрыть</button>
       </div>
 
       <div class="controls" role="group" aria-label="Настройки">
@@ -19,7 +28,9 @@
             <div class="control__label">Текущее время</div>
             <output id="clock" class="control__value" aria-live="polite">--:--:--</output>
           </div>
+        </div>
 
+        <div class="controls__row">
           <label class="control control--inline" title="Цвет заполнения">
             <span class="control__label">Цвет</span>
             <input id="fillColor" type="color" value="#2d7dff" />
@@ -29,18 +40,12 @@
             <span class="control__label">Пустые</span>
             <input id="emptyColor" type="color" value="#ffffff" />
           </label>
+        </div>
 
-          <label class="control control--inline" title="Форма сетки (всегда 86 400 клеток)">
-            <span class="control__label">Сетка</span>
-            <select id="layoutPreset">
-              <option value="classic">360×240 (3:2)</option>
-              <option value="widescreen">384×225 (16:9)</option>
-            </select>
-          </label>
-
-          <label class="control control--inline" title="Показывать границы между клетками (дороже на больших размерах)">
+        <div class="controls__row">
+          <label class="control control--inline" title="Показывать отступ (gap) между клетками">
             <input id="showGrid" type="checkbox" />
-            <span class="control__label">Границы</span>
+            <span class="control__label">Отступ 1px</span>
           </label>
 
           <label class="control control--inline" title="При загрузке сразу заполнить прошедшие секунды текущих суток">
@@ -52,18 +57,19 @@
         <div class="controls__row">
           <button id="togglePause" type="button" class="btn">Пауза</button>
           <button id="reset" type="button" class="btn btn--ghost">Сброс</button>
-          <div class="hint" id="hint">Наведи на квадрат, чтобы увидеть время</div>
+        </div>
+
+        <div class="controls__row">
+          <div class="hint" id="hint">Подсказка: наведи на квадрат, чтобы увидеть время (или тап на мобильном).</div>
         </div>
       </div>
-    </header>
+    </aside>
 
-    <main class="main">
-      <section class="stage" aria-label="Визуализация суток">
-        <div id="canvasHost" class="canvasHost">
-          <canvas id="dayCanvas" class="canvas" aria-label="Сетка секунд" role="img"></canvas>
-          <div id="tooltip" class="tooltip" role="status" aria-hidden="true"></div>
-        </div>
-      </section>
+    <main class="main" aria-label="Визуализация суток">
+      <div id="canvasHost" class="canvasHost">
+        <canvas id="dayCanvas" class="canvas" aria-label="Сетка секунд" role="img"></canvas>
+        <div id="tooltip" class="tooltip" role="status" aria-hidden="true"></div>
+      </div>
     </main>
 
     <script src="./main.js" defer></script>

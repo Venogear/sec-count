@@ -13,6 +13,15 @@
   /** @type {HTMLDivElement} */
   const tooltipEl = document.getElementById("tooltip");
 
+  /** @type {HTMLButtonElement} */
+  const menuBtn = document.getElementById("menuBtn");
+  /** @type {HTMLDivElement} */
+  const backdropEl = document.getElementById("backdrop");
+  /** @type {HTMLElement} */
+  const drawerEl = document.getElementById("drawer");
+  /** @type {HTMLButtonElement} */
+  const closeDrawerBtn = document.getElementById("closeDrawer");
+
   /** @type {HTMLOutputElement} */
   const clockEl = document.getElementById("clock");
   /** @type {HTMLInputElement} */
@@ -360,6 +369,28 @@
   }
 
   function bindUI() {
+    function setDrawerOpen(isOpen) {
+      drawerEl.dataset.open = isOpen ? "true" : "false";
+      drawerEl.setAttribute("aria-hidden", isOpen ? "false" : "true");
+      menuBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+
+      if (isOpen) {
+        backdropEl.hidden = false;
+      } else {
+        backdropEl.hidden = true;
+        hideTooltip();
+      }
+      // Recompute layout in case scrollbar visibility changed.
+      onResize();
+    }
+
+    menuBtn.addEventListener("click", () => setDrawerOpen(true));
+    closeDrawerBtn.addEventListener("click", () => setDrawerOpen(false));
+    backdropEl.addEventListener("click", () => setDrawerOpen(false));
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") setDrawerOpen(false);
+    });
+
     fillColorEl.addEventListener("input", () => {
       state.fillColor = fillColorEl.value;
       persistSettings();
