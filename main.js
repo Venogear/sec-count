@@ -104,46 +104,14 @@
     filled[index] = 1;
     const { x, y } = indexToXY(index);
     const s = state.cellSizeCss;
-    ctx.fillRect(x * s, y * s, s, s);
-  }
-
-  function drawGridLines() {
-    // Avoid heavy grid drawing at tiny cell sizes.
-    if (!state.showGrid) return;
-    if (state.cellSizeCss < 3) return;
-
-    const s = state.cellSizeCss;
-    const w = COLS * s;
-    const h = ROWS * s;
-
-    ctx.save();
-    ctx.strokeStyle = "rgba(255,255,255,0.12)";
-    ctx.lineWidth = 1;
-
-    // Vertical lines
-    for (let x = 0; x <= COLS; x++) {
-      const px = x * s + 0.5;
-      ctx.beginPath();
-      ctx.moveTo(px, 0);
-      ctx.lineTo(px, h);
-      ctx.stroke();
-    }
-
-    // Horizontal lines
-    for (let y = 0; y <= ROWS; y++) {
-      const py = y * s + 0.5;
-      ctx.beginPath();
-      ctx.moveTo(0, py);
-      ctx.lineTo(w, py);
-      ctx.stroke();
-    }
-
-    ctx.restore();
+    const pad = state.showGrid && s >= 3 ? 1 : 0;
+    const w = s - pad * 2;
+    ctx.fillRect(x * s + pad, y * s + pad, w, w);
   }
 
   function fullRedraw() {
     // Background
-    ctx.fillStyle = "#0b0f1a";
+    ctx.fillStyle = state.showGrid && state.cellSizeCss >= 3 ? "rgba(255,255,255,0.12)" : "#0b0f1a";
     ctx.fillRect(0, 0, state.gridPxW, state.gridPxH);
 
     // Filled cells
@@ -158,15 +126,15 @@
         ctx.fillRect(x, y, 1, 1);
       }
     } else {
+      const pad = state.showGrid && s >= 3 ? 1 : 0;
+      const w = s - pad * 2;
       for (let i = 0; i < TOTAL; i++) {
         if (!filled[i]) continue;
         const x = i % COLS;
         const y = (i / COLS) | 0;
-        ctx.fillRect(x * s, y * s, s, s);
+        ctx.fillRect(x * s + pad, y * s + pad, w, w);
       }
     }
-
-    drawGridLines();
   }
 
   function computeLayout() {
@@ -177,17 +145,19 @@
     const availW = Math.max(0, Math.floor(hostRect.width));
     const availH = Math.max(0, Math.floor(hostRect.height));
 
-    // Choose largest integer cell size that fits, but never below 1.
-    const fitCell = Math.floor(Math.min(availW / COLS, availH / ROWS));
-    const cellSize = Math.max(1, fitCell);
+    // Choose largest integer cell size that fills at least one dimension.
+    // This avoids big empty side areas: if one dimension doesn't fit, container scrolls.
+    const fitCellW = Math.floor(availW / COLS);
+    const fitCellH = Math.floor(availH / ROWS);
+    const cellSize = Math.max(1, Math.max(fitCellW, fitCellH));
     state.cellSizeCss = cellSize;
 
     state.gridPxW = COLS * cellSize;
     state.gridPxH = ROWS * cellSize;
 
-    // Center if it fits; if not, rely on scroll.
-    state.offsetCssX = Math.max(0, Math.floor((availW - state.gridPxW) / 2));
-    state.offsetCssY = Math.max(0, Math.floor((availH - state.gridPxH) / 2));
+    // Center only on axes that fit; otherwise pin to top/left and let scroll work.
+    state.offsetCssX = state.gridPxW <= availW ? Math.max(0, Math.floor((availW - state.gridPxW) / 2)) : 0;
+    state.offsetCssY = state.gridPxH <= availH ? Math.max(0, Math.floor((availH - state.gridPxH) / 2)) : 0;
 
     // CSS size
     canvas.style.width = `${state.gridPxW}px`;
@@ -236,8 +206,6 @@
       if (state.catchUpFrom > state.catchUpTo) {
         state.catchUpFrom = -1;
         state.catchUpTo = -1;
-        // After bulk fill, redraw grid overlay once.
-        drawGridLines();
       } else {
         requestRaf();
       }
