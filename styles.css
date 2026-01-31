@@ -143,6 +143,64 @@ body {
   border-color: rgba(45, 125, 255, 0.55);
 }
 
+.gridEditor {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.gridInfo {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.gridEditor__inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gridField {
+  display: grid;
+  gap: 4px;
+}
+
+.gridField__label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.gridMul {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+.gridField input {
+  width: 110px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+
+.gridEditor__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.gridError {
+  min-height: 16px;
+  font-size: 12px;
+  color: rgba(255, 160, 122, 0.95);
+}
+
 .control {
   display: grid;
   gap: 4px;
