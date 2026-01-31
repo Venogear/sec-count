@@ -5,6 +5,7 @@
   const COLS = 360;
   const ROWS = 240;
   const TOTAL = COLS * ROWS; // 86400
+  const DEBUG_RUN_ID = "pre-fix";
 
   /** @type {HTMLCanvasElement} */
   const canvas = document.getElementById("dayCanvas");
@@ -110,6 +111,10 @@
   }
 
   function fullRedraw() {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/a8f1ffa8-a4af-41d6-90ec-d135d8e9b93f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.js:fullRedraw',message:'fullRedraw()',data:{showGrid:state.showGrid,cellSizeCss:state.cellSizeCss,dpr:state.dpr,gridPxW:state.gridPxW,gridPxH:state.gridPxH},timestamp:Date.now(),sessionId:'debug-session',runId:DEBUG_RUN_ID,hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
+
     // Background
     ctx.fillStyle = state.showGrid && state.cellSizeCss >= 3 ? "rgba(255,255,255,0.12)" : "#0b0f1a";
     ctx.fillRect(0, 0, state.gridPxW, state.gridPxH);
@@ -159,6 +164,10 @@
     state.offsetCssX = state.gridPxW <= availW ? Math.max(0, Math.floor((availW - state.gridPxW) / 2)) : 0;
     state.offsetCssY = state.gridPxH <= availH ? Math.max(0, Math.floor((availH - state.gridPxH) / 2)) : 0;
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/a8f1ffa8-a4af-41d6-90ec-d135d8e9b93f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.js:computeLayout',message:'computeLayout()',data:{availW,availH,fitCellW:Math.floor(availW/COLS),fitCellH:Math.floor(availH/ROWS),cellSizeCss:state.cellSizeCss,gridPxW:state.gridPxW,gridPxH:state.gridPxH,offsetCssX:state.offsetCssX,offsetCssY:state.offsetCssY,dpr:state.dpr,showGrid:state.showGrid},timestamp:Date.now(),sessionId:'debug-session',runId:DEBUG_RUN_ID,hypothesisId:'H4'})}).catch(()=>{});
+    // #endregion
+
     // CSS size
     canvas.style.width = `${state.gridPxW}px`;
     canvas.style.height = `${state.gridPxH}px`;
@@ -193,6 +202,8 @@
 
     // Draw pending fill range, chunked.
     if (state.catchUpFrom >= 0 && state.catchUpTo >= state.catchUpFrom) {
+      const startFrom = state.catchUpFrom;
+      const startTo = state.catchUpTo;
       ctx.fillStyle = state.fillColor;
 
       const budget = state.renderBudgetCellsPerFrame;
@@ -206,7 +217,13 @@
       if (state.catchUpFrom > state.catchUpTo) {
         state.catchUpFrom = -1;
         state.catchUpTo = -1;
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/a8f1ffa8-a4af-41d6-90ec-d135d8e9b93f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.js:renderFrame',message:'renderFrame done',data:{startFrom,startTo,drawn,showGrid:state.showGrid,cellSizeCss:state.cellSizeCss,pad:(state.showGrid&&state.cellSizeCss>=3)?1:0},timestamp:Date.now(),sessionId:'debug-session',runId:DEBUG_RUN_ID,hypothesisId:'H2'})}).catch(()=>{});
+        // #endregion
       } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/a8f1ffa8-a4af-41d6-90ec-d135d8e9b93f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.js:renderFrame',message:'renderFrame chunk',data:{startFrom,startTo,drawn,nextFrom:state.catchUpFrom,nextTo:state.catchUpTo,showGrid:state.showGrid},timestamp:Date.now(),sessionId:'debug-session',runId:DEBUG_RUN_ID,hypothesisId:'H2'})}).catch(()=>{});
+        // #endregion
         requestRaf();
       }
     }
@@ -219,6 +236,10 @@
     updateClockText(now);
 
     const target = secondsSinceMidnight(now);
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/a8f1ffa8-a4af-41d6-90ec-d135d8e9b93f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.js:tick',message:'tick()',data:{target,lastFilledBefore:state.lastFilled,showGrid:state.showGrid,cellSizeCss:state.cellSizeCss,dpr:state.dpr,gridPxW:state.gridPxW,gridPxH:state.gridPxH},timestamp:Date.now(),sessionId:'debug-session',runId:DEBUG_RUN_ID,hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
 
     // Day rollover: new day starts.
     if (state.lastFilled >= 0 && target < state.lastFilled) {
@@ -307,6 +328,10 @@
     computeLayout();
     // If only CSS size changes, still need redraw because backing store changed.
     fullRedraw();
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/a8f1ffa8-a4af-41d6-90ec-d135d8e9b93f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.js:onResize',message:'onResize()',data:{prevCell,nextCell:state.cellSizeCss,showGrid:state.showGrid},timestamp:Date.now(),sessionId:'debug-session',runId:DEBUG_RUN_ID,hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
   }
 
   function pointerToCellIndex(clientX, clientY) {
