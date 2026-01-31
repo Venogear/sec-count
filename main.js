@@ -32,6 +32,9 @@
   /** @type {HTMLButtonElement} */
   const closeDrawerBtn = document.getElementById("closeDrawer");
 
+  /** @type {HTMLDivElement} */
+  const layoutModesEl = document.getElementById("layoutModes");
+
   /** @type {HTMLOutputElement} */
   const clockEl = document.getElementById("clock");
   /** @type {HTMLInputElement} */
@@ -52,6 +55,8 @@
   const state = {
     dpr: 1,
     cellSizeCss: 1, // in CSS pixels
+    cellW: 1, // stretch mode: css px per cell in X
+    cellH: 1, // stretch mode: css px per cell in Y
     cols: 360,
     rows: 240,
     gridPxW: 360,
@@ -62,6 +67,11 @@
     emptyColor: emptyColorEl?.value || "#ffffff",
     showGrid: !!showGridEl?.checked,
     startFromNow: true,
+    // fit: fixed 360×240, contain (no crop)
+    // fill: fixed 360×240, cover (crop)
+    // stretch: fixed 360×240, fill (rectangular cells)
+    // auto: best factor grid, contain (no crop)
+    layoutMode: /** @type {"fit"|"fill"|"stretch"|"auto"} */ ("auto"),
     paused: false,
     lastFilled: -1,
     timerId: /** @type {number|null} */ (null),
@@ -127,6 +137,14 @@
     if (filled[index]) return;
     filled[index] = 1;
     const { x, y } = indexToXY(index);
+    if (state.layoutMode === "stretch") {
+      const cw = state.cellW;
+      const ch = state.cellH;
+      const gap = state.showGrid && Math.min(cw, ch) >= 2 ? 1 : 0;
+      ctx.fillRect(x * cw, y * ch, Math.max(1, cw - gap), Math.max(1, ch - gap));
+      return;
+    }
+
     const s = state.cellSizeCss;
     const gap = state.showGrid && s >= 2 ? 1 : 0;
     const w = s - gap;
@@ -137,6 +155,30 @@
     // Background
     ctx.fillStyle = "#0b0f1a";
     ctx.fillRect(0, 0, state.gridPxW, state.gridPxH);
+
+    if (state.layoutMode === "stretch") {
+      const cw = state.cellW;
+      const ch = state.cellH;
+      const gap = state.showGrid && Math.min(cw, ch) >= 2 ? 1 : 0;
+      const w = Math.max(1, cw - gap);
+      const h = Math.max(1, ch - gap);
+
+      ctx.fillStyle = state.emptyColor;
+      for (let i = 0; i < TOTAL; i++) {
+        const x = i % state.cols;
+        const y = (i / state.cols) | 0;
+        ctx.fillRect(x * cw, y * ch, w, h);
+      }
+
+      ctx.fillStyle = state.fillColor;
+      for (let i = 0; i < TOTAL; i++) {
+        if (!filled[i]) continue;
+        const x = i % state.cols;
+        const y = (i / state.cols) | 0;
+        ctx.fillRect(x * cw, y * ch, w, h);
+      }
+      return;
+    }
 
     const s = state.cellSizeCss;
     const gap = state.showGrid && s >= 2 ? 1 : 0;
@@ -208,36 +250,70 @@
     const availW = Math.max(0, Math.floor(hostRect.width));
     const availH = Math.max(0, Math.floor(hostRect.height));
 
-    // Choose a grid (cols×rows) whose aspect matches the screen best,
-    // then fit it fully inside the host (no cropping, no scroll).
-    const best = pickBestGrid(availW, availH);
-    state.cols = best.cols;
-    state.rows = best.rows;
-    // Contain: ensure the grid never exceeds the host.
-    // Use integer size for crisp cells.
-    let cellSize = Math.max(1, Math.floor(Math.min(availW / state.cols, availH / state.rows)));
-
-    // Safety cap: keep canvas backing store under ~48MB of pixels (RGBA).
     const maxPixels = 12_000_000;
-    while (cellSize > 1) {
-      const areaCss = (state.cols * cellSize) * (state.rows * cellSize);
-      if (areaCss <= maxPixels) break;
-      cellSize--;
+
+    // Decide grid shape for this mode.
+    if (state.layoutMode === "auto") {
+      const best = pickBestGrid(availW, availH);
+      state.cols = best.cols;
+      state.rows = best.rows;
+    } else {
+      state.cols = 360;
+      state.rows = 240;
     }
-    state.cellSizeCss = cellSize;
 
-    state.gridPxW = state.cols * cellSize;
-    state.gridPxH = state.rows * cellSize;
+    // Default for square modes.
+    state.cellW = 1;
+    state.cellH = 1;
 
-    // Center inside the host (non-negative offsets).
-    state.offsetCssX = Math.max(0, Math.floor((availW - state.gridPxW) / 2));
-    state.offsetCssY = Math.max(0, Math.floor((availH - state.gridPxH) / 2));
+    if (state.layoutMode === "stretch") {
+      // Fill host exactly; cells become rectangles.
+      state.cellSizeCss = 1;
+      state.gridPxW = availW;
+      state.gridPxH = availH;
+      state.offsetCssX = 0;
+      state.offsetCssY = 0;
+      state.cellW = availW / Math.max(1, state.cols);
+      state.cellH = availH / Math.max(1, state.rows);
 
-    // CSS size
-    canvas.style.width = `${state.gridPxW}px`;
-    canvas.style.height = `${state.gridPxH}px`;
-    canvas.style.marginLeft = `${state.offsetCssX}px`;
-    canvas.style.marginTop = `${state.offsetCssY}px`;
+      canvas.style.width = `${availW}px`;
+      canvas.style.height = `${availH}px`;
+      canvas.style.marginLeft = "0px";
+      canvas.style.marginTop = "0px";
+    } else {
+      // Square cells, integer size for crispness.
+      let cellSize;
+      if (state.layoutMode === "fill") {
+        // Cover: can crop.
+        cellSize = Math.max(1, Math.ceil(Math.max(availW / state.cols, availH / state.rows)));
+      } else {
+        // fit + auto: contain.
+        cellSize = Math.max(1, Math.floor(Math.min(availW / state.cols, availH / state.rows)));
+      }
+
+      while (cellSize > 1) {
+        const areaCss = (state.cols * cellSize) * (state.rows * cellSize);
+        if (areaCss <= maxPixels) break;
+        cellSize--;
+      }
+
+      state.cellSizeCss = cellSize;
+      state.gridPxW = state.cols * cellSize;
+      state.gridPxH = state.rows * cellSize;
+
+      if (state.layoutMode === "fill") {
+        state.offsetCssX = Math.floor((availW - state.gridPxW) / 2);
+        state.offsetCssY = Math.floor((availH - state.gridPxH) / 2);
+      } else {
+        state.offsetCssX = Math.max(0, Math.floor((availW - state.gridPxW) / 2));
+        state.offsetCssY = Math.max(0, Math.floor((availH - state.gridPxH) / 2));
+      }
+
+      canvas.style.width = `${state.gridPxW}px`;
+      canvas.style.height = `${state.gridPxH}px`;
+      canvas.style.marginLeft = `${state.offsetCssX}px`;
+      canvas.style.marginTop = `${state.offsetCssY}px`;
+    }
 
     // DPR: cap to avoid huge backing store on large screens.
     const deviceDpr = clamp(window.devicePixelRatio || 1, 1, 3);
@@ -344,6 +420,9 @@
       if (typeof s.emptyColor === "string") state.emptyColor = s.emptyColor;
       if (typeof s.showGrid === "boolean") state.showGrid = s.showGrid;
       if (typeof s.startFromNow === "boolean") state.startFromNow = s.startFromNow;
+      if (s.layoutMode === "fit" || s.layoutMode === "fill" || s.layoutMode === "stretch" || s.layoutMode === "auto") {
+        state.layoutMode = s.layoutMode;
+      }
     } catch {
       // ignore
     }
@@ -358,6 +437,7 @@
           emptyColor: state.emptyColor,
           showGrid: state.showGrid,
           startFromNow: state.startFromNow,
+          layoutMode: state.layoutMode,
         }),
       );
     } catch {
@@ -398,9 +478,8 @@
     const y = clientY - rect.top;
     if (x < 0 || y < 0 || x >= rect.width || y >= rect.height) return -1;
 
-    const s = state.cellSizeCss;
-    const col = Math.floor(x / s);
-    const row = Math.floor(y / s);
+    const col = state.layoutMode === "stretch" ? Math.floor(x / state.cellW) : Math.floor(x / state.cellSizeCss);
+    const row = state.layoutMode === "stretch" ? Math.floor(y / state.cellH) : Math.floor(y / state.cellSizeCss);
     if (col < 0 || col >= state.cols || row < 0 || row >= state.rows) return -1;
     return row * state.cols + col;
   }
@@ -421,6 +500,26 @@
   function hideTooltip() {
     tooltipEl.dataset.visible = "false";
     tooltipEl.setAttribute("aria-hidden", "true");
+  }
+
+  function setActiveModeUI() {
+    if (!layoutModesEl) return;
+    const btns = layoutModesEl.querySelectorAll("[data-mode]");
+    for (const b of btns) {
+      const mode = b.getAttribute("data-mode");
+      const active = mode === state.layoutMode;
+      b.dataset.active = active ? "true" : "false";
+      b.setAttribute("aria-selected", active ? "true" : "false");
+      b.setAttribute("tabindex", active ? "0" : "-1");
+    }
+  }
+
+  function setLayoutMode(mode) {
+    if (mode !== "fit" && mode !== "fill" && mode !== "stretch" && mode !== "auto") return;
+    state.layoutMode = mode;
+    persistSettings();
+    setActiveModeUI();
+    onResize();
   }
 
   function bindUI() {
@@ -444,6 +543,14 @@
     backdropEl.addEventListener("click", () => setDrawerOpen(false));
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") setDrawerOpen(false);
+    });
+
+    layoutModesEl?.addEventListener("click", (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLElement)) return;
+      const mode = t.getAttribute("data-mode");
+      if (!mode) return;
+      setLayoutMode(mode);
     });
 
     fillColorEl.addEventListener("input", () => {
@@ -530,6 +637,7 @@
     emptyColorEl.value = state.emptyColor;
     showGridEl.checked = state.showGrid;
     startFromNowEl.checked = state.startFromNow;
+    setActiveModeUI();
 
     bindUI();
     initFilledFromMode();

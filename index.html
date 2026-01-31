@@ -31,6 +31,18 @@
         </div>
 
         <div class="controls__row">
+          <div class="control" style="width: 100%;">
+            <div class="control__label">Режим отображения</div>
+            <div id="layoutModes" class="segmented" role="tablist" aria-label="Режим отображения">
+              <button type="button" class="segmented__btn" data-mode="fit" role="tab">Вписать</button>
+              <button type="button" class="segmented__btn" data-mode="fill" role="tab">Заполнить</button>
+              <button type="button" class="segmented__btn" data-mode="stretch" role="tab">Растянуть</button>
+              <button type="button" class="segmented__btn" data-mode="auto" role="tab">Авто‑сетка</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls__row">
           <label class="control control--inline" title="Цвет заполнения">
             <span class="control__label">Цвет</span>
             <input id="fillColor" type="color" value="#2d7dff" />

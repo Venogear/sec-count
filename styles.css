@@ -113,6 +113,36 @@ body {
   align-items: center;
 }
 
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.segmented__btn {
+  appearance: none;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.segmented__btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.segmented__btn[data-active="true"] {
+  background: rgba(45, 125, 255, 0.18);
+  border-color: rgba(45, 125, 255, 0.55);
+}
+
 .control {
   display: grid;
   gap: 4px;
